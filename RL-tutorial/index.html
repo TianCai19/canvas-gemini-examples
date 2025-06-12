@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>强化学习寻宝游戏 (理论完备版)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- KaTeX for beautiful math formulas -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" xintegrity="sha384-n8MVd4RsNIU0KOVEMeaMurLMA2Gkvsg2IOw4YnLEdDx0YUAwvBENzVkAPwhcrB6UQ" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" xintegrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" xintegrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05" crossorigin="anonymous"></script>
+    <style>
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        #gameCanvas {
+            background-image:
+                linear-gradient(rgba(230, 230, 230, 0.5) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(230, 230, 230, 0.5) 1px, transparent 1px);
+        }
+        .dark #gameCanvas {
+             background-image:
+                linear-gradient(rgba(75, 85, 99, 0.5) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(75, 85, 99, 0.5) 1px, transparent 1px);
+        }
+        .viewer-container {
+            height: 180px;
+            background-color: #f3f4f6;
+        }
+        .dark .viewer-container {
+            background-color: #1f2937;
+        }
+        .viewer-content {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.8rem;
+            line-height: 1.5;
+            white-space: pre;
+        }
+        .katex { font-size: 1.1em; }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 flex flex-col items-center justify-center min-h-screen p-4">
+
+    <!-- Main Game Page -->
+    <div id="mainPage" class="w-full">
+        <div class="w-full max-w-6xl mx-auto">
+            <header class="text-center mb-4">
+                <h1 class="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">强化学习 (Q-Learning) 寻宝游戏</h1>
+                <p class="mt-2 text-lg text-gray-600 dark:text-gray-400">观察智能体如何通过试错，学习找到宝藏的最佳路径。</p>
+            </header>
+
+            <div class="flex flex-col lg:flex-row gap-6">
+                <!-- Game & Viewers -->
+                <div class="flex-grow flex flex-col gap-4">
+                    <div class="flex items-center justify-center">
+                         <canvas id="gameCanvas" class="bg-white dark:bg-gray-800 rounded-lg shadow-xl"></canvas>
+                    </div>
+                    <div id="logContainer" class="w-full viewer-container bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg overflow-y-auto" style="display: none;">
+                        <h3 class="font-bold text-lg mb-2 text-center">决策与学习日志</h3>
+                        <div id="logContent" class="viewer-content"></div>
+                    </div>
+                    <div id="qTableContainer" class="w-full viewer-container bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg overflow-y-auto" style="display: none;">
+                        <h3 class="font-bold text-lg mb-2 text-center">Q-Table (大脑记忆)</h3>
+                        <div id="qTableContent" class="viewer-content"></div>
+                    </div>
+                </div>
+
+                <!-- Controls and Info Panel -->
+                <div class="w-full lg:w-80 flex-shrink-0 space-y-4">
+                    <div class="bg-white dark:bg-gray-800 p-5 rounded-lg shadow-lg">
+                        <h2 class="text-xl font-bold mb-4 text-center border-b pb-2 border-gray-200 dark:border-gray-700">控制面板</h2>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button id="startTrainingBtn" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-300 shadow-md">开始训练</button>
+                            <button id="stopTrainingBtn" class="w-full bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition duration-300 shadow-md" disabled>停止训练</button>
+                            <button id="resetAgentBtn" class="w-full bg-gray-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 transition duration-300 shadow-md col-span-2">重置智能体</button>
+                        </div>
+                         <div class="mt-4 space-y-2">
+                             <label for="showPolicyToggle" class="flex items-center justify-between cursor-pointer p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"><span class="text-gray-700 dark:text-gray-300">显示策略箭头</span><div class="relative"><input type="checkbox" id="showPolicyToggle" class="sr-only"><div class="block bg-gray-300 dark:bg-gray-600 w-10 h-6 rounded-full"></div><div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition"></div></div></label>
+                             <label for="showQTableToggle" class="flex items-center justify-between cursor-pointer p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"><span class="text-gray-700 dark:text-gray-300">显示Q-Table</span><div class="relative"><input type="checkbox" id="showQTableToggle" class="sr-only"><div class="block bg-gray-300 dark:bg-gray-600 w-10 h-6 rounded-full"></div><div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition"></div></div></label>
+                             <label for="showLogToggle" class="flex items-center justify-between cursor-pointer p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"><span class="text-gray-700 dark:text-gray-300">显示决策日志</span><div class="relative"><input type="checkbox" id="showLogToggle" class="sr-only"><div class="block bg-gray-300 dark:bg-gray-600 w-10 h-6 rounded-full"></div><div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition"></div></div></label>
+                         </div>
+                         <div class="mt-4 border-t pt-4 border-gray-200 dark:border-gray-700">
+                             <button id="showTheoryBtn" class="w-full bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition duration-300 shadow-md">查看原理说明</button>
+                         </div>
+                    </div>
+                    
+                    <div class="bg-white dark:bg-gray-800 p-5 rounded-lg shadow-lg">
+                        <h2 class="text-xl font-bold mb-4 text-center border-b pb-2 border-gray-200 dark:border-gray-700">状态信息</h2>
+                        <div class="space-y-3 text-sm">
+                            <div class="flex justify-between"><span>训练回合 (Episode):</span> <span id="episodeCount" class="font-mono font-semibold">0</span></div>
+                            <div class="flex justify-between"><span>当前步数 (Step):</span> <span id="stepCount" class="font-mono font-semibold">0</span></div>
+                            <div class="flex justify-between"><span>探索率 (Epsilon):</span> <span id="epsilonValue" class="font-mono font-semibold">1.00</span></div>
+                            <div class="flex justify-between"><span>状态:</span> <span id="status" class="font-semibold text-blue-500">待机</span></div>
+                             <div class="flex justify-between"><span>总奖励:</span> <span id="totalReward" class="font-mono font-semibold">0</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Theory Page -->
+    <div id="theoryPage" class="w-full max-w-4xl mx-auto p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg hidden">
+        <div class="flex justify-between items-center mb-6 border-b pb-4 border-gray-200 dark:border-gray-700">
+            <h1 class="text-3xl font-bold">Q-Learning 核心原理</h1>
+            <button id="backToGameBtn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-300">返回游戏</button>
+        </div>
+
+        <div class="space-y-8 text-lg leading-relaxed">
+            <section>
+                <h2 class="text-2xl font-bold mb-3 text-blue-600 dark:text-blue-400">1. 什么是 Q-Learning?</h2>
+                <p>Q-Learning 是一种经典的强化学习算法，它属于“无模型 (Model-Free)”学习。这意味着智能体在开始时对环境一无所知，它不需要地图或规则手册，而是通过与环境的直接互动——反复地“尝试”和“从结果中学习”——来找到解决问题的最优策略。</p>
+                <p class="mt-2">它的核心思想是学习一个名为 **Q-Function** (Q函数) 的“价值函数”，这个函数用来评估在某个特定状态(State)下，执行某个特定动作(Action)有多“好”。这个“好”的程度，就是我们所说的 **Q值**。</p>
+            </section>
+            
+            <section>
+                <h2 class="text-2xl font-bold mb-3 text-blue-600 dark:text-blue-400">2. 核心公式：Q值更新法则</h2>
+                <p>智能体的学习过程，本质上就是不断更新它的“大脑”——Q-Table。每次行动之后，它都会使用下面的贝尔曼方程(Bellman Equation)的变体来更新Q值：</p>
+                <div class="my-4 p-4 bg-gray-100 dark:bg-gray-900 rounded-lg text-center overflow-x-auto">
+                    $$ Q_{new}(s, a) \leftarrow Q_{current}(s, a) + \alpha \cdot [R(s,a) + \gamma \cdot \max_{a'} Q(s', a') - Q_{current}(s, a)] $$
+                </div>
+                <p>让我们来分解这个公式的每个部分：</p>
+                <ul class="list-disc list-inside space-y-2 mt-4 pl-4">
+                    <li>$Q(s, a)$: 在状态 $s$ 下执行动作 $a$ 的Q值。公式的目标就是更新它。</li>
+                    <li>$\alpha$ (Alpha): **学习率 (Learning Rate)**。它的取值在 [0, 1] 之间。它决定了我们多大程度上相信“新学到的知识”。如果 $\alpha=0$，智能体将完全不学习；如果 $\alpha=1$，智能体将完全用新知识覆盖旧知识。</li>
+                    <li>$R(s,a)$: **奖励 (Reward)**。在状态 $s$ 执行动作 $a$ 后，环境立刻反馈的奖励值。</li>
+                    <li>$\gamma$ (Gamma): **折扣因子 (Discount Factor)**。取值也在 [0, 1] 之间。它代表了智能体对“未来奖励”的重视程度。如果 $\gamma=0$，它只关心眼前奖励（非常短视）；如果 $\gamma$ 接近1，它会更看重长远的未来总奖励。</li>
+                    <li>$\max_{a'} Q(s', a')$: **对未来的最大预期**。这代表了在到达下一个状态 $s'$ 后，所有可能的新动作 $a'$ 中，能带来的最大Q值。这是智能体对未来规划的体现。</li>
+                </ul>
+                <p class="mt-3">这个公式可以解读为：<span class="font-bold">新Q值 = 旧Q值 + 学习率 × (当前获得的奖励 + 对未来的预期 - 旧Q值)</span>。括号里的部分 `[...]` 通常被称为 **TD-Error (时序差分误差)**，它代表了“预期”和“现实”之间的差距。</p>
+            </section>
+
+            <!-- MODIFIED SECTION -->
+            <section>
+                <h2 class="text-2xl font-bold mb-3 text-blue-600 dark:text-blue-400">3. 策略：探索与利用 (Exploration vs. Exploitation)</h2>
+                <p>智能体如何决定下一步走哪里？这就是它的**策略(Policy)**, 通常用 $\pi$ 表示。如果它总是选择当前看起来最好的动作（纯粹的“利用”），就可能会陷入局部最优，错过更好的未知选择。反之，如果它总是随机乱走（纯粹的“探索”），就无法利用学到的经验。因此，我们需要在两者之间找到一个平衡。</p>
+                
+                <h3 class="text-xl font-semibold mt-4">ε-Greedy (艾普西隆贪心) 策略</h3>
+                <p>为了实现这种平衡，我们采用一种简单而高效的策略，名为 **ε-Greedy**。它的决策过程可以用下面的公式来描述：</p>
+                <div class="my-4 p-4 bg-gray-100 dark:bg-gray-900 rounded-lg overflow-x-auto text-center">
+                $$ \pi(s) = \begin{cases} 
+                \text{随机选择一个动作 } a & \text{以概率 } \epsilon \\
+                \arg\max_{a} Q(s, a) & \text{以概率 } 1 - \epsilon
+                \end{cases} $$
+                </div>
+                <ul class="list-disc list-inside space-y-2 mt-4 pl-4">
+                    <li>$\pi(s)$: 在状态 $s$ 下，策略函数 $\pi$ 输出的动作。</li>
+                    <li>$\epsilon$ (Epsilon): **探索率**。一个 [0, 1] 之间的小数。</li>
+                    <li>$\arg\max_{a} Q(s, a)$: 这个表达式代表“利用”行为。它会找到让 $Q(s, a)$ 值最大的那个动作 $a$。例如，如果向右的Q值最高，它就会输出“向右”。</li>
+                </ul>
+                <p class="mt-2">在训练初期，我们会设置一个较高的 $\epsilon$ (例如1.0)，鼓励智能体充分探索环境。随着训练的进行，我们会让 $\epsilon$ 逐渐衰减变小，使得智能体越来越倾向于“利用”它已经学到的最优策略。</p>
+
+                <h3 class="text-xl font-semibold mt-4">具体例子</h3>
+                <p>假设当前探索率 $\epsilon = 0.1$。智能体位于状态 $s=(5,5)$，它大脑中的Q-Table记录如下：</p>
+                <ul class="list-none space-y-1 mt-2 pl-6 font-mono">
+                    <li>$Q((5,5), \text{上}) = -10.5$</li>
+                    <li>$Q((5,5), \text{下}) = -2.3$</li>
+                    <li>$Q((5,5), \text{左}) = -15.8$</li>
+                    <li>$Q((5,5), \text{右}) = -2.1$</li>
+                </ul>
+                <p class="mt-2">现在，智能体开始决策：</p>
+                <ol class="list-decimal list-inside space-y-2 mt-2 pl-4">
+                    <li>首先，它会生成一个0到1之间的随机数。</li>
+                    <li><strong>情况一 (概率 90%)</strong>：如果随机数大于等于 $\epsilon=0.1$，智能体执行**“利用”**。它会比较四个方向的Q值，发现“向右”的Q值 $(-2.1)$ 是最大的。因此，它会选择**向右**走。</li>
+                    <li><strong>情况二 (概率 10%)</strong>：如果随机数小于 $\epsilon=0.1$，智能体执行**“探索”**。它会完全忽略Q值，并在“上、下、左、右”四个动作中**随机**选择一个。每个动作被选中的概率都是2.5%。</li>
+                </ol>
+            </section>
+            <!-- END OF MODIFIED SECTION -->
+
+             <section>
+                <h2 class="text-2xl font-bold mb-3 text-blue-600 dark:text-blue-400">4. 具体案例演算</h2>
+                <p>假设我们的参数是: $\alpha = 0.1$, $\gamma = 0.9$。智能体在地图上从 `(7,9)` 走到了 `(8,9)`，然后走到了宝藏 `(9,9)`。</p>
+                
+                <h3 class="text-xl font-semibold mt-4">第一步: 发现宝藏</h3>
+                <p>智能体在状态 $s = (8,9)$，执行动作 $a = \text{向右}$，到达了宝藏，获得奖励 $R = +100$。下一个状态 $s'$ 是终点，没有后续动作，所以 $\max Q(s', a') = 0$。</p>
+                <p>假设更新前的 $Q((8,9), \text{右}) = 0$。我们来更新它：</p>
+                 <div class="my-4 p-4 bg-gray-100 dark:bg-gray-900 rounded-lg overflow-x-auto text-center">
+                    $ Q_{new} \leftarrow 0 + 0.1 \cdot [100 + 0.9 \cdot 0 - 0] $<br>
+                    $ Q_{new} \leftarrow 10.0 $
+                </div>
+                <p>现在，智能体的“大脑”里记住了：$Q((8,9), \text{右}) = 10.0$。这个“好消息”被记录下来了。</p>
+
+                <h3 class="text-xl font-semibold mt-4">第二步: "好消息"的反向传播</h3>
+                <p>在之后的一轮，智能体在状态 $s = (7,9)$，执行动作 $a = \text{向右}$，到达了状态 $s'=(8,9)$，获得奖励 $R = -1$ (移动惩罚)。</p>
+                <p>在 $s'=(8,9)$ 这个新位置，智能体查阅“大脑”发现，从这里能做的最好选择是向右走，其Q值为10.0。所以，$\max Q((8,9), a') = 10.0$。</p>
+                 <p>假设更新前的 $Q((7,9), \text{右}) = 0$。我们来更新它：</p>
+                 <div class="my-4 p-4 bg-gray-100 dark:bg-gray-900 rounded-lg overflow-x-auto text-center">
+                    $ Q_{new} \leftarrow 0 + 0.1 \cdot [-1 + 0.9 \cdot 10.0 - 0] $<br>
+                    $ Q_{new} \leftarrow 0.1 \cdot [-1 + 9.0] $<br>
+                    $ Q_{new} \leftarrow 0.8 $
+                </div>
+                <p>就这样，即使从`(7,9)`到`(8,9)`本身是个小惩罚，但因为它得知`(8,9)`是一个非常有“钱途”的地方，所以它更新了对 $Q((7,9), \text{右})$ 的评估，使其Q值显著增加。这个过程不断重复，最终将“宝藏”的价值信息一直传回起点。</p>
+            </section>
+        </div>
+    </div>
+    
+    <script>
+        // --- DOM Elements ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const episodeCountEl = document.getElementById('episodeCount');
+        const stepCountEl = document.getElementById('stepCount');
+        const epsilonValueEl = document.getElementById('epsilonValue');
+        const statusEl = document.getElementById('status');
+        const totalRewardEl = document.getElementById('totalReward');
+        const startTrainingBtn = document.getElementById('startTrainingBtn');
+        const stopTrainingBtn = document.getElementById('stopTrainingBtn');
+        const resetAgentBtn = document.getElementById('resetAgentBtn');
+        const showPolicyToggle = document.getElementById('showPolicyToggle');
+        const showQTableToggle = document.getElementById('showQTableToggle');
+        const qTableContainer = document.getElementById('qTableContainer');
+        const qTableContent = document.getElementById('qTableContent');
+        const showLogToggle = document.getElementById('showLogToggle');
+        const logContainer = document.getElementById('logContainer');
+        const logContent = document.getElementById('logContent');
+        const mainPage = document.getElementById('mainPage');
+        const theoryPage = document.getElementById('theoryPage');
+        const showTheoryBtn = document.getElementById('showTheoryBtn');
+        const backToGameBtn = document.getElementById('backToGameBtn');
+
+        // --- Game and Grid Configuration ---
+        const GRID_SIZE = 10, TILE_SIZE = 40;
+        canvas.width = GRID_SIZE * TILE_SIZE; canvas.height = GRID_SIZE * TILE_SIZE;
+        canvas.style.backgroundSize = `${TILE_SIZE}px ${TILE_SIZE}px`;
+        const TILES = { EMPTY: 0, GOAL: 2, OBSTACLE: 3 };
+        const grid = [[0,0,0,0,0,0,0,0,0,0],[0,0,0,3,0,0,0,0,3,0],[0,0,0,3,0,0,0,0,3,0],[0,0,0,0,0,0,3,0,0,0],[0,0,0,0,0,0,0,0,0,0],[0,3,3,0,0,0,0,0,0,0],[0,0,0,0,0,3,3,3,0,0],[0,0,0,0,0,0,0,0,0,0],[0,0,3,0,0,0,0,3,0,0],[0,0,0,0,0,0,0,0,0,2]];
+        const START_POS = { x: 0, y: 0 };
+        let agentPos = { ...START_POS };
+        const EMOJIS = { AGENT: '🤖', GOAL: '🏆', OBSTACLE: '🔥' };
+        const ACTION_MAP_CH = {'up': '上', 'down': '下', 'left': '左', 'right': '右'};
+
+        // --- RL Parameters ---
+        let qTable = {};
+        const LEARNING_RATE = 0.1, DISCOUNT_FACTOR = 0.9;
+        let epsilon = 1.0;
+        const EPSILON_DECAY = 0.998, MIN_EPSILON = 0.01;
+        const ACTIONS = ['up', 'down', 'left', 'right'];
+
+        // --- Game State ---
+        let episode = 0, step = 0, totalReward = 0;
+        let trainingInterval = null;
+        let showPolicy = false, showQTable = false, showLog = false;
+        let isMouseOverQTable = false, isMouseOverLog = false;
+        let logMessages = [];
+
+        // --- Helper Functions ---
+        const getStateKey = (pos) => `${pos.x},${pos.y}`;
+        const getQValue = (stateKey, action) => {
+            if (!qTable[stateKey]) qTable[stateKey] = { up: 0, down: 0, left: 0, right: 0 };
+            return qTable[stateKey][action];
+        };
+        const chooseAction = (stateKey) => {
+            if (Math.random() < epsilon) {
+                return { action: ACTIONS[Math.floor(Math.random() * ACTIONS.length)], reason: '探索' };
+            } else {
+                const stateQValues = qTable[stateKey] || { up: 0, down: 0, left: 0, right: 0 };
+                let maxQ = -Infinity;
+                Object.values(stateQValues).forEach(q => { if(q > maxQ) maxQ = q; });
+                const bestActions = ACTIONS.filter(a => stateQValues[a] === maxQ);
+                return { action: bestActions[Math.floor(Math.random() * bestActions.length)], reason: '利用' };
+            }
+        };
+        const updateQValue = (stateKey, action, reward, nextStateKey) => {
+            const oldQ = getQValue(stateKey, action);
+            const nextStateQValues = qTable[nextStateKey] || { up: 0, down: 0, left: 0, right: 0 };
+            const maxNextQ = Math.max(...Object.values(nextStateQValues));
+            const newQ = oldQ + LEARNING_RATE * (reward + DISCOUNT_FACTOR * maxNextQ - oldQ);
+            qTable[stateKey][action] = newQ;
+            return { oldQ, newQ };
+        };
+        const addLog = (message) => {
+            logMessages.push(message);
+            if (logMessages.length > 50) logMessages.shift();
+        };
+        
+        // --- Drawing ---
+        const drawGrid = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let y = 0; y < GRID_SIZE; y++) {
+                for (let x = 0; x < GRID_SIZE; x++) {
+                    if (showPolicy && grid[y][x] === TILES.EMPTY) drawPolicyArrow(x, y);
+                    let emoji = null;
+                    if (grid[y][x] === TILES.GOAL) emoji = EMOJIS.GOAL;
+                    if (grid[y][x] === TILES.OBSTACLE) emoji = EMOJIS.OBSTACLE;
+                    if(emoji) {
+                        ctx.font = `${TILE_SIZE * 0.6}px sans-serif`;
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(emoji, x * TILE_SIZE + TILE_SIZE / 2, y * TILE_SIZE + TILE_SIZE / 2 + 2);
+                    }
+                }
+            }
+        };
+        const drawAgent = () => {
+             ctx.font = `${TILE_SIZE * 0.7}px sans-serif`;
+             ctx.textAlign = 'center';
+             ctx.textBaseline = 'middle';
+             ctx.fillText(EMOJIS.AGENT, agentPos.x * TILE_SIZE + TILE_SIZE / 2, agentPos.y * TILE_SIZE + TILE_SIZE / 2 + 2);
+        };
+        const drawPolicyArrow = (x, y) => {
+            const stateKey = getStateKey({ x, y });
+            const stateQValues = qTable[stateKey];
+            if (!stateQValues) return;
+            const allValues = Object.values(stateQValues);
+            if (allValues.every(v => v === allValues[0])) return;
+            let bestAction = null, maxQ = -Infinity;
+            for (const action of ACTIONS) { if (stateQValues[action] > maxQ) { maxQ = stateQValues[action]; bestAction = action; } }
+            if (!bestAction) return;
+            const cx = x * TILE_SIZE + TILE_SIZE / 2, cy = y * TILE_SIZE + TILE_SIZE / 2, arrowSize = TILE_SIZE / 5;
+            ctx.save(); ctx.beginPath(); ctx.translate(cx, cy);
+            switch (bestAction) {
+                case 'up': ctx.rotate(-Math.PI / 2); break;
+                case 'down': ctx.rotate(Math.PI / 2); break;
+                case 'left': ctx.rotate(Math.PI); break;
+            }
+            ctx.moveTo(-arrowSize, -arrowSize / 2); ctx.lineTo(arrowSize, 0); ctx.lineTo(-arrowSize, arrowSize / 2); ctx.closePath();
+            ctx.fillStyle = `rgba(37, 99, 235, 0.7)`;
+            ctx.fill(); ctx.restore();
+        };
+        const renderQTable = () => {
+            qTableContent.textContent = Object.keys(qTable).sort().map(state => {
+                const v = qTable[state];
+                return `S(${state.padEnd(4)}): U:${v.up.toFixed(2).padStart(7)} D:${v.down.toFixed(2).padStart(7)} L:${v.left.toFixed(2).padStart(7)} R:${v.right.toFixed(2).padStart(7)}`;
+            }).join('\n');
+            if (!isMouseOverQTable) qTableContainer.scrollTop = qTableContainer.scrollHeight;
+        };
+        const renderLog = () => {
+            logContent.textContent = logMessages.join('\n');
+            if (!isMouseOverLog) logContainer.scrollTop = logContainer.scrollHeight;
+        };
+        const render = () => {
+            drawGrid();
+            drawAgent();
+        };
+        const updateUI = () => {
+            episodeCountEl.textContent = episode;
+            stepCountEl.textContent = step;
+            epsilonValueEl.textContent = epsilon.toFixed(2);
+            totalRewardEl.textContent = totalReward;
+            if(showQTable) renderQTable();
+            if(showLog) renderLog();
+        };
+
+        // --- Game Logic ---
+        const resetEpisode = () => { agentPos = { ...START_POS }; step = 0; totalReward = 0; };
+        const runTrainingStep = () => {
+            const currentStateKey = getStateKey(agentPos);
+            const { action, reason } = chooseAction(currentStateKey);
+            addLog(`[决策] S(${currentStateKey}) | 原因: ${reason} | 动作: ${ACTION_MAP_CH[action]}`);
+            let nextPos = { ...agentPos };
+            if (action === 'up') nextPos.y--; else if (action === 'down') nextPos.y++; else if (action === 'left') nextPos.x--; else if (action === 'right') nextPos.x++;
+            step++;
+            let reward = -1, done = false;
+            if (nextPos.x < 0 || nextPos.x >= GRID_SIZE || nextPos.y < 0 || nextPos.y >= GRID_SIZE) {
+                reward = -100; done = true; nextPos = agentPos; 
+            } else {
+                const tile = grid[nextPos.y][nextPos.x];
+                if (tile === TILES.GOAL) { reward = 100; done = true; statusEl.textContent = '找到宝藏! ✅'; statusEl.className = 'font-semibold text-green-500'; } 
+                else if (tile === TILES.OBSTACLE) { reward = -100; done = true; statusEl.textContent = '掉入陷阱! ☠️'; statusEl.className = 'font-semibold text-red-500'; }
+            }
+            totalReward += reward;
+            const nextStateKey = getStateKey(nextPos);
+            const { oldQ, newQ } = updateQValue(currentStateKey, action, reward, nextStateKey);
+            const change = newQ - oldQ;
+            addLog(`[学习] Q(S(${currentStateKey}), ${ACTION_MAP_CH[action]}): ${oldQ.toFixed(2)} -> ${newQ.toFixed(2)} (Δ: ${change.toFixed(2)})`);
+            agentPos = nextPos;
+            if (done) { episode++; if (epsilon > MIN_EPSILON) epsilon *= EPSILON_DECAY; resetEpisode(); }
+        };
+        const animationLoop = () => {
+            if (!trainingInterval) return;
+            runTrainingStep();
+            render();
+            updateUI();
+            requestAnimationFrame(animationLoop);
+        };
+
+        // --- Event Listeners ---
+        startTrainingBtn.addEventListener('click', () => {
+            if (trainingInterval) return;
+            trainingInterval = true; statusEl.textContent = '训练中...'; statusEl.className = 'font-semibold text-yellow-500 animate-pulse';
+            startTrainingBtn.disabled = true; stopTrainingBtn.disabled = false; resetAgentBtn.disabled = true;
+            animationLoop();
+        });
+        stopTrainingBtn.addEventListener('click', () => {
+            trainingInterval = false; statusEl.textContent = '已暂停'; statusEl.className = 'font-semibold text-gray-500';
+            startTrainingBtn.disabled = false; stopTrainingBtn.disabled = true; resetAgentBtn.disabled = false;
+        });
+        resetAgentBtn.addEventListener('click', () => {
+             trainingInterval = false; qTable = {}; logMessages = []; epsilon = 1.0; episode = 0; resetEpisode(); render(); updateUI();
+             statusEl.textContent = '待机'; statusEl.className = 'font-semibold text-blue-500';
+             startTrainingBtn.disabled = false; stopTrainingBtn.disabled = true; resetAgentBtn.disabled = false;
+        });
+        const setupToggle = (toggleEl, containerEl, stateCallback) => {
+            toggleEl.addEventListener('change', (e) => {
+                const isChecked = e.target.checked;
+                stateCallback(isChecked);
+                if (containerEl) containerEl.style.display = isChecked ? 'block' : 'none';
+                e.target.nextElementSibling.nextElementSibling.style.transform = isChecked ? 'translateX(1rem)' : 'translateX(0)';
+                if(isChecked) updateUI();
+            });
+        };
+        setupToggle(showPolicyToggle, null, (s) => { showPolicy = s; render(); });
+        setupToggle(showQTableToggle, qTableContainer, (s) => showQTable = s);
+        setupToggle(showLogToggle, logContainer, (s) => showLog = s);
+        
+        showTheoryBtn.addEventListener('click', () => {
+            mainPage.classList.add('hidden');
+            theoryPage.classList.remove('hidden');
+            // Re-render math formulas when theory page is shown
+            renderMathInElement(theoryPage, {
+              delimiters: [
+                  {left: '$$', right: '$$', display: true},
+                  {left: '$', right: '$', display: false},
+              ]
+            });
+        });
+        backToGameBtn.addEventListener('click', () => {
+            theoryPage.classList.add('hidden');
+            mainPage.classList.remove('hidden');
+        });
+
+        qTableContainer.addEventListener('mouseenter', () => isMouseOverQTable = true);
+        qTableContainer.addEventListener('mouseleave', () => isMouseOverQTable = false);
+        logContainer.addEventListener('mouseenter', () => isMouseOverLog = true);
+        logContainer.addEventListener('mouseleave', () => isMouseOverLog = false);
+
+        window.onload = () => { 
+            resetEpisode(); 
+            render(); 
+            updateUI();
+        }
+    </script>
+</body>
+</html>
