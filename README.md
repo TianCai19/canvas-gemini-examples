@@ -1,72 +1,72 @@
-# Canvas Gemini Examples
+# Canvas Gemini 示例项目集
 
-This repository contains various examples and tools built with Canvas and Gemini.
+这个仓库包含了使用 Canvas 和 Gemini 构建的各种示例和工具。
 
-## Projects
+## 项目列表
 
-### Gemini Image Summary
-A web-based tool that uses Google's Gemini AI to analyze and summarize images. Features include:
-- Drag and drop or file selection for image upload
-- AI-powered image analysis and description
-- Real-time feedback and results display
-- Modern UI with responsive design
+### Gemini 图像分析工具
+一个基于网页的工具，使用 Google 的 Gemini AI 来分析和总结图片。功能包括：
+- 支持拖放或文件选择上传图片
+- AI 驱动的图像分析和描述
+- 实时反馈和结果显示
+- 响应式设计的现代界面
 
-To use the image summary tool:
-1. Open `gemini-image-summary/index.html` in a web browser
-2. Upload an image using drag & drop or file selection
-3. Wait for the AI to analyze and provide a summary
-4. View the detailed description of the image
+使用方法：
+1. 在网页浏览器中打开 `gemini-image-summary/index.html`
+2. 通过拖放或文件选择上传图片
+3. 等待 AI 分析并提供总结
+4. 查看图片的详细描述
 
-**Online Demo:** [Gemini Image Summary](https://gemini.google.com/share/72f0e7a4896e)
+**在线演示：** [Gemini 图像分析工具](https://gemini.google.com/share/72f0e7a4896e)
 
-### Mail Generator (盲盒邮件生成器)
-A web-based tool for generating blind box email pairs between pen pals. Features include:
-- Simple web interface for inputting participant information
-- Customizable email templates
-- Automatic generation of paired messages
-- Copy-to-clipboard functionality
-- Modern UI with Tailwind CSS
+### 盲盒邮件生成器
+一个基于网页的工具，用于生成笔友之间的盲盒邮件配对。功能包括：
+- 简洁的参与者信息输入界面
+- 可自定义的邮件模板
+- 自动生成配对邮件
+- 一键复制功能
+- 使用 Tailwind CSS 构建的现代界面
 
-To use the mail generator:
-1. Open `mail-generater/index.html` in a web browser
-2. Enter participant information (pen name and email)
-3. Customize the email template if desired
-4. Click "Generate" to create the paired messages
+使用方法：
+1. 在网页浏览器中打开 `mail-generater/index.html`
+2. 输入参与者信息（笔名和邮箱）
+3. 根据需要自定义邮件模板
+4. 点击"生成"创建配对邮件
 
-### Other Projects
-- RL-tutorial
-- body-health-detection
-- finger-joint-detection
+### 其他项目
+- RL-tutorial（强化学习教程）
+- body-health-detection（体态健康检测）
+- finger-joint-detection（手指关节检测）
 
-## Finger Joint Detection
+## 手指关节检测
 
-This project uses TensorFlow.js and a pre-trained hand-pose detection model (MediaPipe Hands) to identify the number of extended fingers in an image uploaded by the user.
+这个项目使用 TensorFlow.js 和预训练的手部姿态检测模型（MediaPipe Hands）来识别上传图片中伸出的手指数量。
 
-### How to Run
+### 运行方法
 
-1.  Open the `finger-joint-detection/index.html` file in your web browser.
-2.  Wait for the model to load.
-3.  Click the "Upload Image" button and select an image of a hand.
-4.  The AI will analyze the image, draw the hand skeleton, and display the detected number of fingers.
+1. 在网页浏览器中打开 `finger-joint-detection/index.html` 文件
+2. 等待模型加载完成
+3. 点击"上传图片"按钮并选择一张手部图片
+4. AI 将分析图片，绘制手部骨架，并显示检测到的手指数量
 
-## Body Health Detection
+## 体态健康检测
 
-This project uses TensorFlow.js and the MoveNet pose detection model to monitor your posture in real-time and provide feedback for ergonomic sitting.
+这个项目使用 TensorFlow.js 和 MoveNet 姿态检测模型来实时监控你的坐姿，并提供符合人体工程学的反馈。
 
-### How to Run
+### 运行方法
 
-1. Open the `body-health-detection/index.html` file in your web browser.
-2. Allow access to your camera when prompted.
-3. Sit in front of your camera and the system will track your posture.
-4. Receive alerts when you slouch, tilt your head, or maintain poor posture for too long.
+1. 在网页浏览器中打开 `body-health-detection/index.html` 文件
+2. 允许访问摄像头
+3. 坐在摄像头前，系统将追踪你的姿势
+4. 当你驼背、歪头或保持不良姿势时间过长时，系统会发出提醒
 
-## Reinforcement Learning Tutorial
+## 强化学习教程
 
-An interactive visualization of Q-Learning, demonstrating how an AI agent learns to find treasure through trial and error.
+一个 Q-Learning 的交互式可视化演示，展示 AI 智能体如何通过试错来寻找宝藏。
 
-### How to Run
+### 运行方法
 
-1. Open the `RL-tutorial/index.html` file in your web browser.
-2. Click "Start Training" to watch the agent learn.
-3. Toggle displays to see the Q-table (agent's memory) and decision logs.
-4. View the Theory page to learn about the underlying principles of Q-Learning.
+1. 在网页浏览器中打开 `RL-tutorial/index.html` 文件
+2. 点击"开始训练"观看智能体学习过程
+3. 切换显示选项查看 Q 表（智能体的记忆）和决策日志
+4. 查看理论页面了解 Q-Learning 的基本原理
