@@ -1,6 +1,27 @@
 # Canvas Gemini Examples
 
-This repository contains a collection of interactive examples built with machine learning models and the HTML Canvas.
+This repository contains various examples and tools built with Canvas and Gemini.
+
+## Projects
+
+### Mail Generator (盲盒邮件生成器)
+A web-based tool for generating blind box email pairs between pen pals. Features include:
+- Simple web interface for inputting participant information
+- Customizable email templates
+- Automatic generation of paired messages
+- Copy-to-clipboard functionality
+- Modern UI with Tailwind CSS
+
+To use the mail generator:
+1. Open `mail-generater/index.html` in a web browser
+2. Enter participant information (pen name and email)
+3. Customize the email template if desired
+4. Click "Generate" to create the paired messages
+
+### Other Projects
+- RL-tutorial
+- body-health-detection
+- finger-joint-detection
 
 ## Finger Joint Detection
 
