@@ -17,7 +17,7 @@ To use the image summary tool:
 3. Wait for the AI to analyze and provide a summary
 4. View the detailed description of the image
 
-**Online Demo:** [Gemini Image Summary](https://g.co/gemini/share/1f1e0222711c)
+**Online Demo:** [Gemini Image Summary](https://gemini.google.com/share/72f0e7a4896e)
 
 ### Mail Generator (盲盒邮件生成器)
 A web-based tool for generating blind box email pairs between pen pals. Features include:
