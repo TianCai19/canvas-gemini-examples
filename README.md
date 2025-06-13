@@ -4,6 +4,19 @@ This repository contains various examples and tools built with Canvas and Gemini
 
 ## Projects
 
+### Gemini Image Summary
+A web-based tool that uses Google's Gemini AI to analyze and summarize images. Features include:
+- Drag and drop or file selection for image upload
+- AI-powered image analysis and description
+- Real-time feedback and results display
+- Modern UI with responsive design
+
+To use the image summary tool:
+1. Open `gemini-image-summary/index.html` in a web browser
+2. Upload an image using drag & drop or file selection
+3. Wait for the AI to analyze and provide a summary
+4. View the detailed description of the image
+
 ### Mail Generator (盲盒邮件生成器)
 A web-based tool for generating blind box email pairs between pen pals. Features include:
 - Simple web interface for inputting participant information
