@@ -92,6 +92,8 @@ python3 -m http.server 8080
 
 **在线演示：** [强化学习教程](https://gemini.google.com/share/ea41cb14967b)
 
+**版本2：** [强化学习教程 V2](https://g.co/gemini/share/b922541eaa03)
+
 ### 🖐️ 手指关节检测
 这个项目使用 TensorFlow.js 和预训练的手部姿态检测模型（MediaPipe Hands）来识别上传图片中伸出的手指数量。特点：
 - 实时手部姿态检测
