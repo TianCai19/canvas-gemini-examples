@@ -2,6 +2,35 @@
 
 这个仓库包含了使用 Canvas 和 Gemini 构建的各种示例和工具。每个项目都展示了不同的 AI 应用场景，从图像分析到强化学习，帮助开发者更好地理解和应用这些技术。
 
+## 🚀 快速开始
+
+### 本地运行方式
+
+所有项目都是基于HTML的独立应用，可以通过以下两种方式运行：
+
+#### 方法一：使用Python HTTP服务器（推荐）
+```bash
+# 在项目根目录下运行
+python3 -m http.server 8000
+
+# 如果8000端口被占用，可以使用其他端口
+python3 -m http.server 8080
+```
+
+然后在浏览器中访问：
+- **项目总览：** http://localhost:8000/
+- **Gemini图像分析：** http://localhost:8000/gemini-image-summary/index.html
+- **人脸检测计时器：** http://localhost:8000/face-detection-timer/index.html
+- **盲盒邮件生成器：** http://localhost:8000/mail-generater/index.html
+- **强化学习教程：** http://localhost:8000/RL-tutorial/index.html
+- **体态健康检测：** http://localhost:8000/body-health-detection/index.html
+- **手指关节检测：** http://localhost:8000/finger-joint-detection/index.html
+
+#### 方法二：直接在浏览器中打开
+直接双击各个项目文件夹中的 `index.html` 文件，浏览器会自动打开。
+
+> **注意：** 某些功能（如摄像头访问、文件上传）可能需要HTTPS环境才能正常工作，建议使用HTTP服务器方式运行。
+
 ## 项目列表
 
 ### 🖼️ Gemini 图像分析工具
@@ -18,6 +47,25 @@
 4. 查看图片的详细描述
 
 **在线演示：** [Gemini 图像分析工具](https://gemini.google.com/share/72f0e7a4896e)
+
+### ⏰ 人脸检测计时器
+这个项目结合了AI人脸检测和时间追踪功能，可以记录用户在摄像头前的总时长。特点：
+- 实时人脸检测（基于COCO-SSD模型）
+- 精确的时长累计和显示
+- 数据本地持久化存储
+- 用户友好的重置确认机制
+- 现代化的UI设计和动画效果
+
+使用方法：
+1. 在网页浏览器中打开 `face-detection-timer/index.html`
+2. 允许摄像头访问权限
+3. 站在摄像头前，应用会自动检测并累计时长
+4. 即使关闭页面，时长数据也会被保存
+5. 可以通过"重置时长"按钮清除记录
+
+**技术亮点：** 展示了完整的前端数据持久化解决方案
+
+**在线演示：** [人脸检测计时器](https://g.co/gemini/share/442fea86860f)
 
 ### ✉️ 盲盒邮件生成器
 一个基于网页的工具，用于生成笔友之间的盲盒邮件配对。功能包括：
@@ -59,6 +107,58 @@
 - 长时间使用提醒
 
 ## 开发经验与技术指南
+
+### HTML数据持久化最佳实践
+在前端HTML应用中实现数据持久化是提升用户体验的关键技术。以`face-detection-timer`项目为例，展示了完整的本地数据存储方案：
+
+#### 1. localStorage基础应用
+```javascript
+// 常量定义，避免键名错误
+const LOCAL_STORAGE_KEY = 'aiFaceDetectionTotalDurationMs';
+
+// 保存数据
+function saveDurationToLocalStorage() {
+    localStorage.setItem(LOCAL_STORAGE_KEY, totalDetectedDurationMs.toString());
+}
+
+// 加载数据
+function loadDurationFromLocalStorage() {
+    const savedDuration = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (savedDuration !== null) {
+        totalDetectedDurationMs = parseInt(savedDuration, 10);
+    } else {
+        totalDetectedDurationMs = 0; // 默认值
+    }
+    updateDurationDisplay(); // 立即更新界面
+}
+```
+
+#### 2. 实时数据同步策略
+- **频繁保存**：在每帧检测中都调用保存函数，确保数据不丢失
+- **页面加载时恢复**：`window.onload`事件中首先执行数据加载
+- **类型转换处理**：localStorage只存储字符串，需要适当的类型转换
+
+#### 3. 用户友好的数据管理
+```javascript
+// 安全的数据重置，带确认提示
+function resetDuration() {
+    totalDetectedDurationMs = 0;
+    localStorage.removeItem(LOCAL_STORAGE_KEY);
+    updateDurationDisplay();
+}
+```
+
+#### 4. 数据持久化的关键要点
+- **错误处理**：localStorage可能在隐私模式下不可用
+- **存储限制**：注意浏览器的存储配额限制
+- **数据版本管理**：考虑应用更新时的数据兼容性
+- **用户控制**：提供清除数据的选项
+
+这种持久化方案特别适合单页面应用和AI工具，能够：
+- 保持用户的使用状态和历史记录
+- 提供离线使用能力
+- 减少服务器依赖
+- 改善整体用户体验
 
 ### Gemini Canvas 开发环境
 在使用 Gemini Canvas 进行开发时，有一个重要的便利性特点需要了解：
