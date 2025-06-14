@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 人脸检测与计时持久化 Demo</title>
+    <style>
+        /* 页面整体布局 */
+        body {
+            font-family: 'Inter', sans-serif; /* 使用 Inter 字体 */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #f0f4f8; /* 柔和的背景色 */
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        /* 视频容器样式 */
+        #video-container {
+            position: relative;
+            width: 640px; /* 固定宽度 */
+            height: 480px; /* 固定高度 */
+            background-color: #2c3e50; /* 深色背景 */
+            border-radius: 12px; /* 圆角 */
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3); /* 更强的阴影 */
+            overflow: hidden;
+            margin-bottom: 25px; /* 底部间距 */
+            border: 2px solid #3498db; /* 蓝色边框 */
+        }
+
+        /* 视频流样式 */
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* 保持视频比例并填充容器 */
+            transform: scaleX(-1); /* 镜像翻转摄像头画面，使其更自然 */
+        }
+
+        /* Canvas 叠加层样式 */
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transform: scaleX(-1); /* 同样镜像翻转，使检测框与视频同步 */
+        }
+
+        /* 状态显示样式 */
+        #status {
+            margin-top: 0; /* 调整间距 */
+            padding: 12px 25px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            font-size: 1.3em; /* 稍大字体 */
+            color: #333;
+            min-width: 250px;
+            text-align: center;
+            transition: background-color 0.3s ease, color 0.3s ease; /* 过渡效果 */
+        }
+
+        /* 检测到人脸时的状态样式 */
+        .detected {
+            color: #27ae60; /* 绿色 */
+            font-weight: bold;
+            background-color: #e6ffee; /* 浅绿色背景 */
+        }
+
+        /* 未检测到人脸时的状态样式 */
+        .not-detected {
+            color: #e74c3c; /* 红色 */
+            background-color: #ffe6e6; /* 浅红色背景 */
+        }
+
+        /* 时长显示样式 */
+        #detection-info {
+            margin-top: 20px;
+            padding: 15px 30px;
+            background-color: #34495e; /* 深蓝灰色背景 */
+            color: #ecf0f1; /* 浅色文字 */
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            font-size: 1.5em; /* 更大字体 */
+            font-weight: bold;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* 按钮样式 */
+        .button-group {
+            margin-top: 20px;
+            display: flex;
+            gap: 15px; /* 按钮间距 */
+        }
+        button {
+            padding: 12px 25px;
+            background-color: #3498db; /* 蓝色 */
+            color: white;
+            border: none;
+            border-radius: 25px; /* 更圆的按钮 */
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: bold;
+            transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease; /* 过渡效果 */
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            outline: none; /* 移除焦点边框 */
+        }
+        button:hover {
+            background-color: #2980b9; /* 悬停颜色 */
+            transform: translateY(-2px); /* 向上浮动效果 */
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+        }
+        button:active {
+            background-color: #1a5276; /* 点击颜色 */
+            transform: translateY(0); /* 按下效果 */
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+        button:disabled {
+            background-color: #bdc3c7; /* 禁用颜色 */
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Custom Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            visibility: hidden; /* Start hidden */
+            opacity: 0;
+            transition: visibility 0s, opacity 0.3s ease;
+        }
+        .modal-overlay.visible {
+            visibility: visible;
+            opacity: 1;
+        }
+        .modal-content {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+        .modal-content p {
+            font-size: 1.2em;
+            margin-bottom: 25px;
+            color: #333;
+        }
+        .modal-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+        .modal-buttons button {
+            padding: 10px 25px;
+            border-radius: 20px;
+            font-size: 1em;
+            font-weight: bold;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+        #modalConfirmYes {
+            background-color: #e74c3c; /* Red for confirm */
+        }
+        #modalConfirmYes:hover {
+            background-color: #c0392b;
+        }
+        #modalConfirmNo {
+            background-color: #95a5a6; /* Grey for cancel */
+        }
+        #modalConfirmNo:hover {
+            background-color: #7f8c8d;
+        }
+    </style>
+    <!-- 引入 TensorFlow.js 库 -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.2.0/dist/tf.min.js"></script>
+    <!-- 引入 COCO-SSD 模型 (用于物体检测，包含“人”的检测) -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+</head>
+<body>
+    <h1>AI 摄像头人脸检测与计时</h1>
+    <div id="video-container">
+        <video id="webcam" autoplay playsinline></video>
+        <canvas id="output-canvas"></canvas>
+    </div>
+    <div id="status">正在加载模型...</div>
+    <div id="detection-info">
+        <span id="duration-label">人脸检测总时长:</span>
+        <span id="faceDetectedDuration">00:00:00</span>
+    </div>
+    <div class="button-group">
+        <button id="resetDurationBtn">重置时长</button>
+    </div>
+
+    <!-- Custom Modal for Confirmation -->
+    <div id="customConfirmModal" class="modal-overlay">
+        <div class="modal-content">
+            <p>你确定要重置检测时长吗？</p>
+            <div class="modal-buttons">
+                <button id="modalConfirmYes">确定</button>
+                <button id="modalConfirmNo">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById('webcam');
+        const canvas = document.getElementById('output-canvas');
+        const context = canvas.getContext('2d');
+        const statusDiv = document.getElementById('status');
+        const detectionDurationSpan = document.getElementById('faceDetectedDuration');
+        const resetDurationBtn = document.getElementById('resetDurationBtn');
+
+        // Modal elements
+        const customConfirmModal = document.getElementById('customConfirmModal');
+        const modalConfirmYes = document.getElementById('modalConfirmYes');
+        const modalConfirmNo = document.getElementById('modalConfirmNo');
+
+        let model = undefined; // 用于存储加载的 AI 模型
+
+        let totalDetectedDurationMs = 0; // 总检测时长，以毫秒为单位，将持久化
+        let lastDetectionStartTime = null; // 上次连续检测开始的时间戳，如果未检测到则为 null
+        let lastFrameTimestamp = Date.now(); // 上一帧渲染的时间戳，用于计算帧间时间差
+
+        // 常量，用于 localStorage 键名
+        const LOCAL_STORAGE_KEY = 'aiFaceDetectionTotalDurationMs';
+
+        /**
+         * 加载 AI 模型 (COCO-SSD)。
+         * 这是异步操作，需要等待模型下载完成。
+         */
+        async function loadModel() {
+            statusDiv.textContent = '加载模型中，请稍候...';
+            resetDurationBtn.disabled = true; // 模型加载时禁用按钮
+
+            try {
+                // 加载预训练的 COCO-SSD 模型，这是一个物体检测模型
+                model = await cocoSsd.load();
+                statusDiv.textContent = '模型加载完成，请允许摄像头权限。';
+                console.log('COCO-SSD 模型加载成功！');
+                startWebcam(); // 模型加载成功后启动摄像头
+                resetDurationBtn.disabled = false; // 模型加载成功后启用按钮
+            } catch (error) {
+                statusDiv.textContent = '模型加载失败：' + error.message + '。请刷新页面重试。';
+                console.error('模型加载失败：', error);
+                resetDurationBtn.disabled = true; // 加载失败则保持禁用
+            }
+        }
+
+        /**
+         * 启动摄像头并播放视频流。
+         * 获取到视频流后，设置 Canvas 的尺寸并开始循环检测。
+         */
+        async function startWebcam() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+                // 确保视频元数据加载完毕，这样我们才能获取视频的宽高
+                video.onloadedmetadata = () => {
+                    video.play();
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    console.log('摄像头启动成功！');
+                    lastFrameTimestamp = Date.now(); // 确保摄像头启动后初始化时间戳
+                    detectFrame(); // 启动循环检测
+                };
+            } catch (err) {
+                statusDiv.textContent = '无法访问摄像头：' + err.message + '。请检查权限或设备。';
+                console.error('无法访问摄像头：', err);
+            }
+        }
+
+        /**
+         * 循环检测函数，每帧对视频进行 AI 推理。
+         * 如果检测到“人”，则累加时长并绘制检测框。
+         */
+        async function detectFrame() {
+            if (model) {
+                // 对当前视频帧进行预测
+                // COCO-SSD 识别的是“person”（人），这里我们用它来近似实现“人脸/人”检测
+                const predictions = await model.detect(video);
+
+                context.clearRect(0, 0, canvas.width, canvas.height); // 清除上一帧的绘制
+
+                let personDetectedInThisFrame = false; // 标记当前帧是否检测到人
+                predictions.forEach(prediction => {
+                    // 如果检测到“人”并且置信度高于 60%
+                    if (prediction.class === 'person' && prediction.score > 0.6) {
+                        personDetectedInThisFrame = true;
+                        const [x, y, width, height] = prediction.bbox;
+
+                        // 在 Canvas 上绘制检测框
+                        context.beginPath();
+                        context.rect(x, y, width, height);
+                        context.lineWidth = 2;
+                        context.strokeStyle = '#2ecc71'; // 绿色边框
+                        context.fillStyle = 'rgba(46, 204, 113, 0.2)'; // 半透明绿色填充
+                        context.stroke();
+                        context.fill();
+
+                        // 绘制标签
+                        context.fillStyle = '#2ecc71';
+                        context.font = 'bold 18px Arial';
+                        // 确保文字不超出边界
+                        const text = `人 (${Math.round(prediction.score * 100)}%)`;
+                        const textX = Math.max(0, x);
+                        const textY = y > 20 ? y - 10 : 20; // 如果 Y 坐标太小，将文字放在下方
+
+                        context.fillText(text, textX, textY);
+                    }
+                });
+
+                const currentTime = Date.now();
+                // 计算当前帧与上一帧之间的时间差
+                const deltaTime = currentTime - lastFrameTimestamp;
+
+                if (personDetectedInThisFrame) {
+                    statusDiv.textContent = '人脸已检测到！';
+                    statusDiv.className = 'detected';
+
+                    if (lastDetectionStartTime === null) {
+                        // 如果是新的连续检测会话开始
+                        lastDetectionStartTime = currentTime;
+                    }
+                    // 累加本次帧的时间差到总时长
+                    totalDetectedDurationMs += deltaTime;
+
+                } else {
+                    statusDiv.textContent = '未检测到人脸。';
+                    statusDiv.className = 'not-detected';
+                    // 如果检测中断，重置上次检测开始时间
+                    lastDetectionStartTime = null;
+                }
+
+                updateDurationDisplay(); // 实时更新显示
+                saveDurationToLocalStorage(); // 每次帧更新都保存，确保持久化
+
+                lastFrameTimestamp = currentTime; // 更新上一帧时间戳
+            }
+
+            // 继续下一帧的检测，使用 requestAnimationFrame 优化动画
+            requestAnimationFrame(detectFrame);
+        }
+
+        /**
+         * 将毫秒转换为 HH:MM:SS 格式。
+         * @param {number} ms - 毫秒数
+         * @returns {string} 格式化后的时间字符串
+         */
+        function formatDuration(ms) {
+            const seconds = Math.floor(ms / 1000);
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const remainingSeconds = seconds % 60;
+
+            const pad = (num) => num.toString().padStart(2, '0');
+            return `${pad(hours)}:${pad(minutes)}:${pad(remainingSeconds)}`;
+        }
+
+        /**
+         * 更新页面上显示的检测时长。
+         */
+        function updateDurationDisplay() {
+            detectionDurationSpan.textContent = formatDuration(totalDetectedDurationMs);
+        }
+
+        /**
+         * 将当前时长保存到 localStorage。
+         */
+        function saveDurationToLocalStorage() {
+            localStorage.setItem(LOCAL_STORAGE_KEY, totalDetectedDurationMs.toString());
+            // console.log(`时长已保存: ${totalDetectedDurationMs}ms`); // 用于调试
+        }
+
+        /**
+         * 从 localStorage 加载之前保存的时长。
+         */
+        function loadDurationFromLocalStorage() {
+            const savedDuration = localStorage.getItem(LOCAL_STORAGE_KEY);
+            if (savedDuration !== null) {
+                totalDetectedDurationMs = parseInt(savedDuration, 10); // 将字符串转换回整数
+                console.log(`时长已加载: ${totalDetectedDurationMs}ms`);
+            } else {
+                totalDetectedDurationMs = 0;
+                console.log('未找到保存的时长，从 0 开始。');
+            }
+            updateDurationDisplay(); // 更新显示
+        }
+
+        /**
+         * 显示自定义确认模态框。
+         */
+        function showConfirmModal() {
+            customConfirmModal.classList.add('visible');
+        }
+
+        /**
+         * 隐藏自定义确认模态框。
+         */
+        function hideConfirmModal() {
+            customConfirmModal.classList.remove('visible');
+        }
+
+        /**
+         * 重置时长并清除 localStorage 中的数据。
+         */
+        function resetDuration() {
+            totalDetectedDurationMs = 0;
+            lastDetectionStartTime = null; // 重置会话开始时间
+            updateDurationDisplay();
+            localStorage.removeItem(LOCAL_STORAGE_KEY); // 从 localStorage 移除
+            console.log('时长已重置。');
+            statusDiv.textContent = '时长已重置！';
+            statusDiv.className = ''; // 恢复默认样式
+        }
+
+        // --- 事件监听器 ---
+
+        // 点击重置按钮时显示模态框
+        resetDurationBtn.addEventListener('click', showConfirmModal);
+
+        // 模态框“确定”按钮点击事件
+        modalConfirmYes.addEventListener('click', () => {
+            resetDuration(); // 执行重置逻辑
+            hideConfirmModal(); // 隐藏模态框
+        });
+
+        // 模态框“取消”按钮点击事件
+        modalConfirmNo.addEventListener('click', hideConfirmModal);
+
+        // 页面加载完成后立即执行：
+        window.onload = () => {
+            loadDurationFromLocalStorage(); // 首先加载之前保存的时长
+            loadModel(); // 然后加载 AI 模型并启动摄像头
+        };
+
+    </script>
+</body>
+</html>
