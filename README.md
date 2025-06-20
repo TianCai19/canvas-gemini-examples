@@ -25,6 +25,7 @@ python3 -m http.server 8080
 - **强化学习教程：** http://localhost:8000/RL-tutorial/index.html
 - **体态健康检测：** http://localhost:8000/body-health-detection/index.html
 - **手指关节检测：** http://localhost:8000/finger-joint-detection/index.html
+- **文章转图片生成器：** http://localhost:8000/article2picture-generater/index.html
 
 #### 方法二：直接在浏览器中打开
 直接双击各个项目文件夹中的 `index.html` 文件，浏览器会自动打开。
@@ -32,6 +33,23 @@ python3 -m http.server 8080
 > **注意：** 某些功能（如摄像头访问、文件上传）可能需要HTTPS环境才能正常工作，建议使用HTTP服务器方式运行。
 
 ## 项目列表
+
+### 📝 文章转图片生成器
+一个强大的内容可视化工具，可以将文章内容转换为精美的图片格式。功能包括：
+- 多页面内容编辑和预览
+- 多种宽高比选择（自动、1:1方形、4:5竖屏、9:16故事）
+- 智能缩放规则（平衡、宽度优先、高度优先、极简稳定）
+- 实时编辑模式，支持内容自定义
+- 单页下载和批量打包下载（ZIP格式）
+- 响应式设计和现代化UI
+
+使用方法：
+1. 在网页浏览器中打开 `article2picture-generater/index.html`
+2. 选择合适的内容比例和缩放规则
+3. 开启编辑模式自定义内容
+4. 预览效果后下载单页或全部页面
+
+**在线演示：** [文章转图片生成器](https://g.co/gemini/share/18fa96a05aa3)
 
 ### 🖼️ Gemini 图像分析工具
 一个基于网页的工具，使用 Google 的 Gemini AI 来分析和总结图片。功能包括：
