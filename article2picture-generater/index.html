@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>可复用内容生成器模板</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans SC', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        /* --- Live Preview & Container Query Setup --- */
+        #preview-wrapper {
+            background-color: #e5e7eb; /* bg-gray-200 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            border-radius: 1.5rem;
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        .dark #preview-wrapper {
+             background-color: #1f2937; /* dark:bg-gray-800 */
+        }
+        
+        #page-container {
+             width: 100%;
+             height: 100%;
+             container-type: size; 
+             container-name: page;
+        }
+
+        .page-content {
+            display: none;
+            animation: fadeIn 0.6s ease-in-out;
+            width: 100%;
+            height: 100%;
+        }
+        .page-content.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .page-card {
+            background-color: white;
+            border-radius: 1.5rem;
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+            height: 100%;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            overflow: hidden;
+            transition: padding 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        /* --- Responsive Content using Container Queries & CSS Variables --- */
+        @container page (min-width: 0px) {
+            .page-card {
+                --padding: clamp(1rem, calc(4cqw + 2cqh), 3rem);
+                --h1-fs: clamp(1.5rem, calc(6cqw + 3cqh), 4rem);
+                --h2-fs: clamp(1.25rem, calc(5cqw + 2.5cqh), 2.5rem);
+                --h3-fs: clamp(1.1rem, calc(3.5cqw + 1.5cqh), 2rem);
+                --p-fs: clamp(0.9rem, calc(2.5cqw + 1cqh), 1.4rem);
+                padding: var(--padding);
+            }
+            .page-card h1, .page-card h2, .page-card h3, .page-card p, .page-card li {
+                transition: font-size 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            }
+            .page-card h1 { font-size: var(--h1-fs); }
+            .page-card h2 { font-size: var(--h2-fs); }
+            .page-card h3 { font-size: var(--h3-fs); }
+            .page-card p, .page-card li { font-size: var(--p-fs); }
+        }
+        
+        .control-btn.active {
+            background-color: #4f46e5; /* indigo-600 */
+            color: white;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        
+        /* --- Styles for Edit Mode --- */
+        .edit-mode-active [contenteditable="true"] {
+            outline: 2px dashed #6366f1; /* A dashed indigo outline */
+            outline-offset: 4px;
+            cursor: text;
+            border-radius: 4px;
+        }
+        .edit-mode-active [contenteditable="true"]:focus {
+             outline: 2px solid #4f46e5; /* A solid outline on focus */
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 flex items-center justify-center min-h-screen p-4">
+
+    <main class="w-full max-w-2xl mx-auto">
+        <div id="preview-wrapper">
+            <div id="page-container">
+                <div class="page-content active">
+                    <div class="page-card text-center">
+                        <h1 data-editable class="font-bold text-gray-900 dark:text-white leading-tight">你的主标题放在这里</h1>
+                        <p data-editable class="mt-6 text-gray-600 dark:text-gray-400">这里是副标题或引导语</p>
+                    </div>
+                </div>
+
+                <div class="page-content">
+                    <div class="page-card">
+                        <h2 data-editable class="font-bold mb-4">第二页的小标题</h2>
+                        <p data-editable class="leading-relaxed">这里是你的正文内容第一段。你可以自由地写下任何你想表达的文字。</p>
+                        <p data-editable class="mt-4 leading-relaxed">这是第二段，可以用来补充说明或者开启新的话题。</p>
+                    </div>
+                </div>
+                
+                <div class="page-content">
+                    <div class="page-card">
+                        <h3 data-editable class="font-bold text-green-600 dark:text-green-400 mb-2">要点概览</h3>
+                        <h2 data-editable class="font-bold mb-4">核心观点</h2>
+                        <ul class="list-disc list-inside space-y-3">
+                            <li data-editable>这是第一个要点。</li>
+                            <li data-editable>这是第二个要点，内容可以长一些。</li>
+                            <li data-editable>这是第三个要点。</li>
+                        </ul>
+                    </div>
+                </div>
+
+                </div>
+        </div>
+
+        <div class="flex items-center justify-between mt-8">
+            <button id="prev-btn" class="bg-white dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-bold py-2 px-6 rounded-full shadow-md hover:bg-gray-100 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                上一页
+            </button>
+            <div id="page-indicator" class="text-sm text-gray-600 dark:text-gray-400"></div>
+            <button id="next-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                下一页
+            </button>
+        </div>
+        
+        <div class="mt-6 p-4 bg-white dark:bg-gray-800 rounded-2xl shadow-inner space-y-4">
+             <div id="aspect-ratio-selector" class="flex flex-wrap justify-center gap-2">
+                 <button data-ratio="auto" class="control-btn active text-sm py-2 px-4 rounded-full bg-gray-200 dark:bg-gray-700 transition-all duration-200">自动</button>
+                <button data-ratio="1:1" class="control-btn text-sm py-2 px-4 rounded-full bg-gray-200 dark:bg-gray-700 transition-all duration-200">1:1 方形</button>
+                <button data-ratio="4:5" class="control-btn text-sm py-2 px-4 rounded-full bg-gray-200 dark:bg-gray-700 transition-all duration-200">4:5 竖屏</button>
+                <button data-ratio="9:16" class="control-btn text-sm py-2 px-4 rounded-full bg-gray-200 dark:bg-gray-700 transition-all duration-200">9:16 故事</button>
+            </div>
+            
+            <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+                 <div id="scaling-rule-selector" class="flex flex-wrap justify-center gap-2">
+                    <button data-rule="balanced" class="control-btn active text-sm py-2 px-4 rounded-full bg-gray-200 dark:bg-gray-700 transition-all duration-200">平衡 (默认)</button>
+                    <button data-rule="width-priority" class="control-btn text-sm py-2 px-4 rounded-full bg-gray-200 dark:bg-gray-700 transition-all duration-200">宽度优先</button>
+                    <button data-rule="height-priority" class="control-btn text-sm py-2 px-4 rounded-full bg-gray-200 dark:bg-gray-700 transition-all duration-200">高度优先</button>
+                    <button data-rule="minimalist" class="control-btn text-sm py-2 px-4 rounded-full bg-gray-200 dark:bg-gray-700 transition-all duration-200">极简稳定</button>
+                </div>
+                <p id="scaling-rule-explanation" class="text-center text-xs text-gray-500 dark:text-gray-400 mt-3 h-4"></p>
+            </div>
+
+            <div class="border-t border-gray-200 dark:border-gray-700 pt-4 flex justify-center">
+                 <button id="edit-mode-btn" class="control-btn bg-yellow-400 hover:bg-yellow-500 text-gray-800 font-bold py-2 px-5 rounded-full shadow-md transition-all duration-200">
+                    开启编辑模式
+                </button>
+            </div>
+             
+             <div class="flex flex-col sm:flex-row items-center justify-center gap-4 border-t border-gray-200 dark:border-gray-700 pt-4">
+                <button id="download-current-btn" class="w-full sm:w-auto bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-full shadow-md hover:shadow-lg transition-all duration-200">
+                    下载本页图片
+                </button>
+                <button id="download-all-btn" class="w-full sm:w-auto bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-full shadow-md hover:shadow-lg transition-all duration-200">
+                    打包下载全部 (ZIP)
+                </button>
+            </div>
+            <p id="loading-indicator" class="text-center text-sm text-gray-500 dark:text-gray-400 mt-3" style="display: none;">正在生成图片，请稍候...</p>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const body = document.body;
+            const pages = document.querySelectorAll('.page-content');
+            const prevBtn = document.getElementById('prev-btn');
+            const nextBtn = document.getElementById('next-btn');
+            const pageIndicator = document.getElementById('page-indicator');
+            const pageContainer = document.getElementById('page-container');
+            const editableElements = document.querySelectorAll('[data-editable]');
+            let currentPageIndex = 0;
+            const totalPages = pages.length;
+
+            function showPage(pageIndex) {
+                if(totalPages === 0) return;
+                pages.forEach((page, index) => page.classList.toggle('active', index === pageIndex));
+                pageIndicator.textContent = `${pageIndex + 1} / ${totalPages}`;
+                prevBtn.disabled = pageIndex === 0;
+                nextBtn.disabled = pageIndex === totalPages - 1;
+                nextBtn.textContent = pageIndex === totalPages - 1 ? '完成' : '下一页';
+            }
+            showPage(currentPageIndex);
+
+            nextBtn.addEventListener('click', () => { if (currentPageIndex < totalPages - 1) { currentPageIndex++; showPage(currentPageIndex); } });
+            prevBtn.addEventListener('click', () => { if (currentPageIndex > 0) { currentPageIndex--; showPage(currentPageIndex); } });
+
+            // --- Control Panels Logic ---
+            const aspectRatioSelector = document.getElementById('aspect-ratio-selector');
+            const previewWrapper = document.getElementById('preview-wrapper');
+            aspectRatioSelector.addEventListener('click', (e) => {
+                const target = e.target.closest('button');
+                if (target) {
+                    aspectRatioSelector.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
+                    target.classList.add('active');
+                    previewWrapper.style.aspectRatio = 'auto';
+                    const selectedRatio = target.dataset.ratio;
+                    if (selectedRatio !== 'auto') {
+                        previewWrapper.style.aspectRatio = selectedRatio.replace(':', ' / ');
+                    }
+                }
+            });
+
+            const scalingRuleSelector = document.getElementById('scaling-rule-selector');
+            const scalingRuleExplanation = document.getElementById('scaling-rule-explanation');
+            const scalingRules = {
+                balanced: { name: '平衡 (默认)', explanation: '综合考虑宽度和高度，在各种比例下都有协调的视觉效果。', formulas: { '--padding': 'clamp(1rem, calc(4cqw + 2cqh), 3rem)', '--h1-fs': 'clamp(1.5rem, calc(6cqw + 3cqh), 4rem)', '--h2-fs': 'clamp(1.25rem, calc(5cqw + 2.5cqh), 2.5rem)', '--h3-fs': 'clamp(1.1rem, calc(3.5cqw + 1.5cqh), 2rem)', '--p-fs': 'clamp(0.9rem, calc(2.5cqw + 1cqh), 1.4rem)', } },
+                'width-priority': { name: '宽度优先', explanation: '字体大小主要随宽度变化，适合横向内容或宽屏场景。', formulas: { '--padding': 'clamp(1rem, calc(6cqw + 1cqh), 3rem)', '--h1-fs': 'clamp(1.5rem, calc(8cqw + 1.5cqh), 4rem)', '--h2-fs': 'clamp(1.25rem, calc(7cqw + 1cqh), 2.5rem)', '--h3-fs': 'clamp(1.1rem, calc(5cqw + 1cqh), 2rem)', '--p-fs': 'clamp(0.9rem, calc(4cqw + 0.5cqh), 1.4rem)', } },
+                'height-priority': { name: '高度优先', explanation: '字体大小主要随高度变化，适合故事等窄长画幅。', formulas: { '--padding': 'clamp(1rem, calc(2cqw + 4cqh), 3rem)', '--h1-fs': 'clamp(1.5rem, calc(3cqw + 6cqh), 4rem)', '--h2-fs': 'clamp(1.25rem, calc(2.5cqw + 5cqh), 2.5rem)', '--h3-fs': 'clamp(1.1rem, calc(1.5cqw + 3.5cqh), 2rem)', '--p-fs': 'clamp(0.9rem, calc(1cqw + 2.5cqh), 1.4rem)', } },
+                minimalist: { name: '极简稳定', explanation: '字体大小随容器最短边变化，视觉更稳定，动态感较弱。', formulas: { '--padding': 'clamp(1rem, 6cqmin, 3rem)', '--h1-fs': 'clamp(1.5rem, 9cqmin, 4rem)', '--h2-fs': 'clamp(1.25rem, 7cqmin, 2.5rem)', '--h3-fs': 'clamp(1.1rem, 5.5cqmin, 2rem)', '--p-fs': 'clamp(0.9rem, 4.5cqmin, 1.4rem)', } }
+            };
+            function applyScalingRule(ruleKey) {
+                const rule = scalingRules[ruleKey];
+                if (!rule) return;
+                Object.entries(rule.formulas).forEach(([key, value]) => pageContainer.style.setProperty(key, value));
+                scalingRuleExplanation.textContent = rule.explanation;
+            }
+            scalingRuleSelector.addEventListener('click', (e) => {
+                const target = e.target.closest('button');
+                if (target) {
+                    const ruleKey = target.dataset.rule;
+                    scalingRuleSelector.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
+                    target.classList.add('active');
+                    applyScalingRule(ruleKey);
+                }
+            });
+            applyScalingRule('balanced');
+
+            // --- Edit Mode Logic ---
+            const editModeBtn = document.getElementById('edit-mode-btn');
+            let isEditMode = false;
+            editModeBtn.addEventListener('click', () => {
+                isEditMode = !isEditMode;
+                body.classList.toggle('edit-mode-active', isEditMode);
+                editModeBtn.textContent = isEditMode ? '关闭编辑模式' : '开启编辑模式';
+                editModeBtn.classList.toggle('active', isEditMode);
+                editableElements.forEach(el => {
+                    el.contentEditable = isEditMode;
+                });
+            });
+
+            // --- Download Logic ---
+            const downloadCurrentBtn = document.getElementById('download-current-btn');
+            const downloadAllBtn = document.getElementById('download-all-btn');
+            const loadingIndicator = document.getElementById('loading-indicator');
+
+            function triggerDownload(url, filename) {
+                const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            }
+
+            async function captureAndDownload(isBatch = false) {
+                if (totalPages === 0) { alert("没有可下载的内容。"); return; }
+                if(isEditMode) { alert("请先关闭编辑模式再进行下载。"); return; }
+                
+                loadingIndicator.style.display = 'block';
+                const buttons = [downloadCurrentBtn, downloadAllBtn, prevBtn, nextBtn, editModeBtn];
+                buttons.forEach(btn => { if(btn) btn.disabled = true; });
+
+                const h2cOptions = {
+                    scale: 2, 
+                    useCORS: true, 
+                    backgroundColor: '#FFFFFF',
+                    onclone: (clonedDoc) => {
+                        clonedDoc.querySelectorAll('.page-content').forEach(el => {
+                          el.style.animation = 'none';
+                          el.style.opacity = '1';
+                        });
+                        clonedDoc.documentElement.classList.remove('dark');
+                        clonedDoc.body.classList.remove('dark');
+                    }
+                };
+                
+                const selectedRatio = aspectRatioSelector.querySelector('.active').dataset.ratio;
+
+                // ✅ FIX: Determine the correct element to capture based on the selected ratio
+                const elementToCapture = selectedRatio === 'auto'
+                    ? document.querySelector('.page-content.active .page-card')
+                    : previewWrapper;
+
+                if (isBatch) {
+                    const zip = new JSZip();
+                    const originalActiveIndex = currentPageIndex;
+                    loadingIndicator.textContent = '正在打包全部图片...';
+
+                    for (let i = 0; i < totalPages; i++) {
+                        loadingIndicator.textContent = `正在处理第 ${i + 1} / ${totalPages} 页...`;
+                        showPage(i);
+                        await new Promise(resolve => setTimeout(resolve, 50));
+                        
+                        // ✅ FIX: In batch mode, always determine the correct element for the current page
+                        const batchElementToCapture = selectedRatio === 'auto'
+                            ? document.querySelector('.page-content.active .page-card')
+                            : previewWrapper;
+                        
+                        try {
+                            const canvas = await html2canvas(batchElementToCapture, h2cOptions);
+                            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                            zip.file(`第${i + 1}页-${selectedRatio}.png`, blob);
+                        } catch (error) { console.error(`Error generating image for page ${i + 1}:`, error); }
+                    }
+                    showPage(originalActiveIndex);
+                    loadingIndicator.textContent = '正在压缩文件...';
+                    try {
+                        const zipBlob = await zip.generateAsync({ type: 'blob' });
+                        triggerDownload(URL.createObjectURL(zipBlob), `全部页面-${selectedRatio}.zip`);
+                    } catch (error) { console.error('Error generating ZIP file:', error); alert('压缩文件失败，请稍后再试。'); }
+                } else {
+                    loadingIndicator.textContent = '正在生成当前页图片...';
+                    try {
+                        const canvas = await html2canvas(elementToCapture, h2cOptions);
+                        triggerDownload(canvas.toDataURL('image/png'), `page-${currentPageIndex + 1}-${selectedRatio}.png`);
+                    } catch (error) { console.error('Error generating image for current page:', error); alert('生成图片失败，请稍后再试。'); }
+                }
+
+                loadingIndicator.style.display = 'none';
+                buttons.forEach(btn => { if(btn) btn.disabled = false; });
+                showPage(currentPageIndex);
+            }
+
+            downloadCurrentBtn.addEventListener('click', () => captureAndDownload(false));
+            downloadAllBtn.addEventListener('click', () => captureAndDownload(true));
+        });
+    </script>
+
+</body>
+</html>
