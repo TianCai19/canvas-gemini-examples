@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>吃饭转盘</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+        }
+        /* 自定义指针样式 */
+        .pointer {
+            width: 0;
+            height: 0;
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-top: 30px solid #ef4444; /* 红色指针 */
+            position: absolute;
+            top: -10px; /* 调整指针位置，使其尖端指向轮盘中心 */
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            transition: transform 0.3s ease;
+        }
+        /* 结果弹窗样式 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .modal-overlay.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        .modal-content {
+            background: white;
+            padding: 2rem 3rem;
+            border-radius: 1rem;
+            text-align: center;
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+        }
+        .modal-overlay.visible .modal-content {
+            transform: scale(1);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 flex flex-col items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-md mx-auto text-center">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 dark:text-white mb-4">今天吃什么？</h1>
+        <p class="text-gray-600 dark:text-gray-300 mb-8">点击按钮，让命运来决定！</p>
+
+        <div class="relative w-80 h-80 md:w-96 md:h-96 mx-auto mb-8">
+            <div class="pointer"></div>
+            <canvas id="wheelCanvas" width="500" height="500" class="rounded-full shadow-lg transition-transform duration-[5000ms] ease-out"></canvas>
+        </div>
+
+        <button id="spinButton" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-lg text-xl shadow-lg transition-all transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-300 disabled:bg-gray-400 disabled:cursor-not-allowed">
+            开始旋转
+        </button>
+    </div>
+
+    <!-- 结果展示弹窗 -->
+    <div id="resultModal" class="modal-overlay">
+        <div class="modal-content shadow-2xl">
+            <h2 class="text-2xl font-bold text-gray-700 mb-2">恭喜！</h2>
+            <p class="text-lg text-gray-600 mb-4">今天就决定吃这个了：</p>
+            <p id="resultText" class="text-4xl font-extrabold text-blue-600 py-4"></p>
+            <button id="closeModalButton" class="mt-6 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-8 rounded-lg transition">
+                关闭
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- 配置项 ---
+        const options = ["韩国料理", "泰国料理", "日本料理", "印度料理", "墨西哥菜", "越南菜", "中东菜"];
+        const colors = ["#f87171", "#fb923c", "#facc15", "#4ade80", "#38bdf8", "#818cf8", "#c084fc"];
+
+        // --- 获取 DOM 元素 ---
+        const canvas = document.getElementById('wheelCanvas');
+        const spinButton = document.getElementById('spinButton');
+        const resultModal = document.getElementById('resultModal');
+        const resultText = document.getElementById('resultText');
+        const closeModalButton = document.getElementById('closeModalButton');
+        const ctx = canvas.getContext('2d');
+
+        // --- 变量初始化 ---
+        const numOptions = options.length;
+        const arcSize = (2 * Math.PI) / numOptions; // 每个扇区的弧度
+        const radius = canvas.width / 2;
+        let currentRotation = 0;
+        let isSpinning = false;
+
+        // --- 核心功能函数 ---
+
+        /**
+         * 绘制转盘的扇区和文字
+         */
+        function drawWheel() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
+            ctx.translate(radius, radius);
+
+            for (let i = 0; i < numOptions; i++) {
+                const angle = i * arcSize;
+                
+                // 绘制扇区
+                ctx.beginPath();
+                ctx.fillStyle = colors[i % colors.length];
+                ctx.moveTo(0, 0);
+                ctx.arc(0, 0, radius, angle, angle + arcSize);
+                ctx.closePath();
+                ctx.fill();
+
+                // 绘制扇区边框
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                // 绘制文字
+                ctx.save();
+                ctx.fillStyle = "black";
+                ctx.font = "bold 24px 'Noto Sans SC'";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                const textAngle = angle + arcSize / 2;
+                ctx.rotate(textAngle);
+                ctx.fillText(options[i], radius * 0.6, 0);
+                ctx.restore();
+            }
+            ctx.restore();
+        }
+
+        /**
+         * 旋转转盘
+         */
+        function spin() {
+            if (isSpinning) return;
+            isSpinning = true;
+            spinButton.disabled = true;
+
+            // 计算旋转角度
+            // 至少旋转5圈，再加上一个随机角度
+            const spinAngle = Math.random() * 360 + 5 * 360; 
+            currentRotation += spinAngle;
+
+            // 应用旋转效果
+            canvas.style.transform = `rotate(${currentRotation}deg)`;
+
+            // 等待旋转动画结束
+            setTimeout(() => {
+                const degrees = currentRotation % 360;
+                
+                // --- BUG 修复 ---
+                // 指针在顶部（相对于Canvas 0度角，即3点钟方向，是270度）。
+                // 我们需要计算哪个扇区转到了这个位置。
+                // 获胜区域的角度 = (指针位置 - 旋转过的角度)
+                const pointerPositionDegrees = 270; 
+                const winningAngle = (pointerPositionDegrees - degrees + 360) % 360;
+                const sliceAngleDegrees = 360 / numOptions;
+                const winningIndex = Math.floor(winningAngle / sliceAngleDegrees);
+                
+                showResult(options[winningIndex]);
+                isSpinning = false;
+                spinButton.disabled = false;
+            }, 5000); // 这个时间必须和 CSS transition-duration 一致
+        }
+
+        /**
+         * 显示结果弹窗
+         * @param {string} result - 获胜的选项
+         */
+        function showResult(result) {
+            resultText.textContent = result;
+            resultModal.classList.add('visible');
+        }
+
+        /**
+         * 关闭结果弹窗
+         */
+        function hideResult() {
+            resultModal.classList.remove('visible');
+        }
+
+        // --- 事件监听 ---
+        spinButton.addEventListener('click', spin);
+        closeModalButton.addEventListener('click', hideResult);
+        resultModal.addEventListener('click', (e) => {
+            // 点击遮罩层也可以关闭弹窗
+            if (e.target === resultModal) {
+                hideResult();
+            }
+        });
+
+        // --- 初始绘制 ---
+        window.onload = drawWheel;
+
+    </script>
+</body>
+</html>

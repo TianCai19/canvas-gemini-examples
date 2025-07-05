@@ -10,6 +10,7 @@
 | 盲盒邮件生成器          | [点击访问](https://g.co/gemini/share/ab7e35732f53)              |
 | 强化学习教程            | [点击访问](https://gemini.google.com/share/ea41cb14967b)        |
 | 强化学习教程 V2         | [点击访问](https://g.co/gemini/share/b922541eaa03)              |
+| 吃什么转盘              | [点击访问](https://g.co/gemini/share/bcd66c1c158b)              |
 
 > 其余 demo（如体态健康检测、手指关节检测）暂未提供在线演示链接，可本地运行体验。
 
@@ -39,6 +40,7 @@ python3 -m http.server 8080
 - **体态健康检测：** http://localhost:8000/body-health-detection/index.html
 - **手指关节检测：** http://localhost:8000/finger-joint-detection/index.html
 - **文章转图片生成器：** http://localhost:8000/article2picture-generater/index.html
+- **吃什么转盘：** http://localhost:8000/eatWhat/index.html
 
 #### 方法二：直接在浏览器中打开
 直接双击各个项目文件夹中的 `index.html` 文件，浏览器会自动打开。
@@ -124,6 +126,24 @@ python3 -m http.server 8080
 **在线演示：** [强化学习教程](https://gemini.google.com/share/ea41cb14967b)
 
 **版本2：** [强化学习教程 V2](https://g.co/gemini/share/b922541eaa03)
+
+### 🍽️ 吃什么转盘
+一个有趣的饮食决策工具，帮助用户通过旋转轮盘的方式决定今天吃什么。功能特色：
+- 精美的旋转轮盘动画效果
+- 多种国际美食选项（韩国料理、泰国料理、日本料理、印度料理、墨西哥菜、越南菜、中东菜）
+- 流畅的旋转动画和悬停效果
+- 结果弹窗展示
+- 响应式设计，适配移动设备
+
+使用方法：
+1. 在网页浏览器中打开 `eatWhat/index.html`
+2. 点击"开始旋转"按钮
+3. 等待转盘停止旋转
+4. 查看弹窗显示的随机选择结果
+
+**技术亮点：** 使用 Canvas 绘制轮盘，结合 CSS 动画实现流畅的旋转效果
+
+**在线演示：** [吃什么转盘](https://g.co/gemini/share/bcd66c1c158b)
 
 ### 🖐️ 手指关节检测
 这个项目使用 TensorFlow.js 和预训练的手部姿态检测模型（MediaPipe Hands）来识别上传图片中伸出的手指数量。特点：
